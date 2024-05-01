@@ -11,7 +11,7 @@ class Stitcher:
     def __init__(self):
         pass
 
-    def stitch(self, images, ratio=0.5, reprojThresh=0.0,
+    def stitch1(self, images, ratio=0.85, reprojThresh=4.0,
         showMatches=False):
         # unpack the images, then detect keypoints and extract
         # local invariant descriptors from them
@@ -43,6 +43,72 @@ class Stitcher:
             return (result, vis)
         # return the stitched image
         return result 
+    
+    def stitch2(self, images, ratio=0.75, reprojThresh=2.0,
+        showMatches=False):
+        # unpack the images, then detect keypoints and extract
+        # local invariant descriptors from them
+        (imageB, imageA) = images
+
+        (kpsA, featuresA) = self.detectAndDescribe(imageA)
+        (kpsB, featuresB) = self.detectAndDescribe(imageB)
+        # match features between the two images
+        M = self.matchKeypoints(kpsA, kpsB,
+            featuresA, featuresB, ratio, reprojThresh)
+        # if the match is None, then there aren't enough matched
+        # keypoints to create a panorama
+        if M is None:
+            return None 
+            
+        # otherwise, apply a perspective warp to stitch the images
+        # together
+        (matches, H, status) = M
+        result = cv2.warpPerspective(imageA, H,
+            (imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
+        result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
+
+        # check to see if the keypoint matches should be visualized
+        if showMatches:
+            vis = self.drawMatches(imageA, imageB, kpsA, kpsB, matches,
+                status)
+            # return a tuple of the stitched image and the
+            # visualization
+            return (result, vis)
+        # return the stitched image
+        return result 
+    
+    def stitch3(self, images, ratio=0.3, reprojThresh=1.0,
+        showMatches=False):
+        # unpack the images, then detect keypoints and extract
+        # local invariant descriptors from them
+        (imageB, imageA) = images
+
+        (kpsA, featuresA) = self.detectAndDescribe(imageA)
+        (kpsB, featuresB) = self.detectAndDescribe(imageB)
+        # match features between the two images
+        M = self.matchKeypoints(kpsA, kpsB,
+            featuresA, featuresB, ratio, reprojThresh)
+        # if the match is None, then there aren't enough matched
+        # keypoints to create a panorama
+        if M is None:
+            return None 
+            
+        # otherwise, apply a perspective warp to stitch the images
+        # together
+        (matches, H, status) = M
+        result = cv2.warpPerspective(imageA, H,
+            (imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
+        result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
+
+        # check to see if the keypoint matches should be visualized
+        if showMatches:
+            vis = self.drawMatches(imageA, imageB, kpsA, kpsB, matches,
+                status)
+            # return a tuple of the stitched image and the
+            # visualization
+            return (result, vis)
+        # return the stitched image
+        return result
 
 
     def detectAndDescribe(self, image):
@@ -138,19 +204,20 @@ if __name__ == "__main__":
 
     # stitch the images together to create a panorama
     stitcher = Stitcher()
-    (result1, vis1) = stitcher.stitch([imgA, imgB], showMatches=True)
+    (result1, vis1) = stitcher.stitch1([imgA, imgB], showMatches=True)
 
     # show the images
-    cv2.imshow("Keypoint Matches", vis1)
-    cv2.imshow("Result", result1)
-    cv2.waitKey(0)
+    # cv2.imshow("Keypoint Matches", vis1)
+    # cv2.imshow("Result", result1)
+    # cv2.waitKey(0)
 
-    (result2, vis2) = stitcher.stitch([imgE, imgF], showMatches=True)
+    (result2, vis2) = stitcher.stitch2([imgE, imgF], showMatches=True)
+    cv2.copyMakeBorder(result2, 1000, 1000, 1000, 1000, cv2.BORDER_CONSTANT)
     cv2.imshow("Keypoint Matches", vis2)
     cv2.imshow("Result", result2)
     cv2.waitKey(0)
 
-    (result3, vis3) = stitcher.stitch([result2, imgA], showMatches=True)
+    (result3, vis3) = stitcher.stitch3([imgF, imgA], showMatches=True)
     cv2.imshow("Keypoint Matches", vis3)
     cv2.imshow("Result", result3)
     cv2.waitKey(0)
